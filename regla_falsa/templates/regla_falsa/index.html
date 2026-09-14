@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Regla Falsa — Buscador de raíces</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="{{ url_for('regla_falsa.static', filename='style.css') }}">
+</head>
+<body{% if resultado %} data-tiene-resultado="true"{% endif %}>
+  <div class="chasis">
+    <a href="{{ url_for('menu') }}" style="display:inline-block;margin-bottom:12px;color:#7d8ba0;text-decoration:none;font-family:'IBM Plex Mono',monospace;font-size:13px;">&larr; Menú de proyectos</a>
+
+    {% set err = (error or '')|lower %}
+    {% set convergio = resultado and ('convergencia alcanzada' in resultado.mensaje|lower or 'raíz exacta' in resultado.mensaje|lower) %}
+
+    <div class="placa">
+      <div class="placa-id">
+        {% if error %}
+          <span class="led led-error"></span>
+        {% elif resultado and not convergio %}
+          <span class="led led-espera"></span>
+        {% else %}
+          <span class="led led-listo"></span>
+        {% endif %}
+        <span class="placa-modelo"><strong>RF&#8209;01</strong> · Regla Falsa</span>
+      </div>
+      <span class="placa-estado">
+        {% if error %}FALLA{% elif resultado %}MEDICIÓN COMPLETA{% else %}LISTO{% endif %}
+      </span>
+    </div>
+
+    <header class="encabezado">
+      <h1>Localizador de raíces<br>por interpolación lineal</h1>
+      <p class="subtitulo">
+        Da un intervalo [a, b] donde f cambie de signo. El instrumento traza una
+        cuerda entre (a, f(a)) y (b, f(b)) y usa el punto donde esa cuerda cruza
+        el eje x como la siguiente aproximación a la raíz.
+      </p>
+    </header>
+
+    <figure class="panel panel-tornillos scope">
+      <span class="etiqueta-panel">ESQUEMA · CÓMO FUNCIONA</span>
+      <div class="scope-viewport">
+        <svg viewBox="0 0 680 220" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Diagrama del método de la regla falsa">
+          <defs>
+            <filter id="brillo" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur stdDeviation="2.2" result="blur"/>
+              <feMerge>
+                <feMergeNode in="blur"/>
+                <feMergeNode in="SourceGraphic"/>
+              </feMerge>
+            </filter>
+          </defs>
+          <line x1="30" y1="150" x2="650" y2="150" stroke="#232c3a" stroke-width="1.5"/>
+          <path d="M 60 60 C 200 30, 320 190, 460 60 S 600 40, 630 55"
+                fill="none" stroke="#4eeba0" stroke-width="1.8" filter="url(#brillo)"/>
+          <circle cx="90" cy="72" r="4" fill="#4eeba0"/>
+          <line x1="90" y1="72" x2="90" y2="150" stroke="#232c3a" stroke-width="1"/>
+          <text x="86" y="168" font-family="IBM Plex Mono, monospace" font-size="13" fill="#7d8ba0">a</text>
+
+          <circle cx="470" cy="63" r="4" fill="#4eeba0"/>
+          <line x1="470" y1="63" x2="470" y2="150" stroke="#232c3a" stroke-width="1"/>
+          <text x="466" y="168" font-family="IBM Plex Mono, monospace" font-size="13" fill="#7d8ba0">b</text>
+
+          <line x1="90" y1="72" x2="470" y2="63" stroke="#ffb454" stroke-width="1.5"/>
+          <line x1="90" y1="72" x2="330" y2="150" stroke="#ffb454" stroke-width="1.5" filter="url(#brillo)"/>
+
+          <circle cx="330" cy="150" r="4.5" fill="#ffb454" filter="url(#brillo)"/>
+          <text x="322" y="172" font-family="IBM Plex Mono, monospace" font-size="13" fill="#ffb454">xr</text>
+        </svg>
+      </div>
+      <figcaption>La cuerda entre a y b marca la nueva aproximación xr sobre el eje x.</figcaption>
+    </figure>
+
+    <div class="panel ejemplos" role="group" aria-label="Ejemplos de función para probar rápido">
+      <span class="ejemplos-etiqueta">Cargar canal:</span>
+      <button type="button" class="chip-ejemplo" data-funcion="x**3 - x - 2" data-a="1" data-b="2">x³ − x − 2</button>
+      <button type="button" class="chip-ejemplo" data-funcion="cos(x) - x" data-a="0" data-b="1">cos(x) − x</button>
+      <button type="button" class="chip-ejemplo" data-funcion="exp(-x) - x" data-a="0" data-b="1">e⁻ˣ − x</button>
+      <button type="button" class="chip-ejemplo" data-funcion="x**2 - 2" data-a="0" data-b="2">x² − 2</button>
+    </div>
+
+    <div class="panel panel-setup panel-tornillos">
+      <span class="etiqueta-panel">SETUP</span>
+      <form class="calculo" method="post" novalidate>
+
+        <div class="grupo-campo campo">
+          <p class="grupo-titulo"><span class="canal">01</span> Función a evaluar</p>
+          <label for="funcion">f(x) =</label>
+          <input type="text" id="funcion" name="funcion" value="{{ valores.funcion }}"
+                 class="{{ 'campo-invalido' if ('función' in err or 'funcion' in err or 'paréntesis' in err) else '' }}"
+                 placeholder="x**3 - x - 2" autocomplete="off" required
+                 aria-describedby="ayuda-funcion">
+          <p class="ayuda" id="ayuda-funcion">Acepta notación de calculadora (8x^2 + 3x + 2) o de Python (8*x**2 + 3*x + 2), y funciones como sin(x), cos(x), exp(x), log(x). O usa el teclado de abajo.</p>
+
+          <div class="teclado" id="teclado">
+            <div class="teclado-tabs" role="tablist">
+              <button type="button" class="tab-btn activo" data-tab="basico" role="tab" aria-selected="true">123</button>
+              <button type="button" class="tab-btn" data-tab="funciones" role="tab" aria-selected="false">f(x)</button>
+            </div>
+
+            <div class="panel-teclas" data-panel="basico">
+              <button type="button" class="tecla tecla-variable" data-insert="x">x</button>
+              <button type="button" class="tecla" data-insert="pi">π</button>
+              <button type="button" class="tecla" data-insert="E">e</button>
+              <button type="button" class="tecla" data-insert="^">^</button>
+
+              <button type="button" class="tecla" data-insert="7">7</button>
+              <button type="button" class="tecla" data-insert="8">8</button>
+              <button type="button" class="tecla" data-insert="9">9</button>
+              <button type="button" class="tecla tecla-op" data-insert="/">÷</button>
+
+              <button type="button" class="tecla" data-insert="4">4</button>
+              <button type="button" class="tecla" data-insert="5">5</button>
+              <button type="button" class="tecla" data-insert="6">6</button>
+              <button type="button" class="tecla tecla-op" data-insert="*">×</button>
+
+              <button type="button" class="tecla" data-insert="1">1</button>
+              <button type="button" class="tecla" data-insert="2">2</button>
+              <button type="button" class="tecla" data-insert="3">3</button>
+              <button type="button" class="tecla tecla-op" data-insert="-">−</button>
+
+              <button type="button" class="tecla" data-insert="0">0</button>
+              <button type="button" class="tecla" data-insert=".">.</button>
+              <button type="button" class="tecla" data-insert="(">(</button>
+              <button type="button" class="tecla" data-insert=")">)</button>
+
+              <button type="button" class="tecla tecla-op tecla-ancha" data-insert="+">+</button>
+            </div>
+
+            <div class="panel-teclas oculto" data-panel="funciones">
+              <button type="button" class="tecla tecla-fn" data-insert="sin(">sin</button>
+              <button type="button" class="tecla tecla-fn" data-insert="cos(">cos</button>
+              <button type="button" class="tecla tecla-fn" data-insert="tan(">tan</button>
+              <button type="button" class="tecla tecla-fn" data-insert="sqrt(">√</button>
+
+              <button type="button" class="tecla tecla-fn" data-insert="log(">log</button>
+              <button type="button" class="tecla tecla-fn" data-insert="ln(">ln</button>
+              <button type="button" class="tecla tecla-fn" data-insert="exp(">exp</button>
+              <button type="button" class="tecla tecla-fn" data-insert="Abs(">|x|</button>
+            </div>
+
+            <div class="teclado-acciones">
+              <button type="button" class="tecla accion" id="btn-borrar" aria-label="Borrar un carácter">⌫ Borrar</button>
+              <button type="button" class="tecla accion" id="btn-limpiar" aria-label="Borrar todo el campo">Borrar todo</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="grupo-campo">
+          <p class="grupo-titulo"><span class="canal">02</span> Intervalo de búsqueda</p>
+          <div class="campo campo-doble">
+            <div>
+              <label for="a">a (extremo izquierdo)</label>
+              <input type="text" id="a" name="a" value="{{ valores.a }}" inputmode="decimal" required
+                     class="{{ 'campo-invalido' if ('a debe ser menor' in err or 'signos opuestos' in err) else '' }}">
+            </div>
+            <div>
+              <label for="b">b (extremo derecho)</label>
+              <input type="text" id="b" name="b" value="{{ valores.b }}" inputmode="decimal" required
+                     class="{{ 'campo-invalido' if ('a debe ser menor' in err or 'signos opuestos' in err) else '' }}">
+            </div>
+          </div>
+          <p class="ayuda">f(a) y f(b) deben tener signo opuesto: ahí es donde la curva cruza el eje x.</p>
+        </div>
+
+        <div class="grupo-campo">
+          <p class="grupo-titulo"><span class="canal">03</span> Criterio de paro</p>
+          <div class="campo campo-doble">
+            <div>
+              <label for="tolerancia">Tolerancia</label>
+              <input type="text" id="tolerancia" name="tolerancia" value="{{ valores.tolerancia }}" inputmode="decimal" required
+                     class="{{ 'campo-invalido' if 'tolerancia' in err else '' }}">
+            </div>
+            <div>
+              <label for="max_iter">Iteraciones máximas</label>
+              <input type="text" id="max_iter" name="max_iter" value="{{ valores.max_iter }}" inputmode="numeric" required
+                     class="{{ 'campo-invalido' if 'iteraciones entre' in err else '' }}">
+            </div>
+          </div>
+        </div>
+
+        <div class="barra-accion">
+          <button type="submit" class="boton" id="btn-calcular">EJECUTAR ▸</button>
+          <span class="barra-nota">Cálculo en el servidor, sin dependencias externas.</span>
+        </div>
+      </form>
+    </div>
+
+    {% if error %}
+      <div class="aviso-error" role="alert" tabindex="-1" id="aviso-error">
+        <span class="rotulo">FALLA · No se pudo calcular</span>
+        {{ error }}
+      </div>
+    {% endif %}
+
+    {% if resultado %}
+      <section class="panel panel-readout panel-tornillos" id="resultado" tabindex="-1" aria-live="polite">
+        <span class="etiqueta-panel">READOUT</span>
+        <div class="readout-cuerpo">
+          <div class="readout-encabezado">
+            <h2>Resultado</h2>
+            {% if convergio %}
+              <span class="insignia insignia-ok">CONVERGIÓ</span>
+            {% else %}
+              <span class="insignia insignia-limite">LÍMITE DE ITERACIONES</span>
+            {% endif %}
+          </div>
+          <p class="funcion-evaluada">f(x) = {{ resultado.expresion }} &nbsp;·&nbsp; intervalo inicial [{{ resultado.a_inicial }}, {{ resultado.b_inicial }}]</p>
+
+          <div class="displays">
+            <div class="display display-raiz">
+              <p class="display-etiqueta">RAÍZ APROX.</p>
+              <p class="display-valor">
+                <span id="valor-raiz">x ≈ {{ resultado.raiz | fmt(8) }}</span>
+                <button type="button" class="btn-copiar" id="btn-copiar-raiz" aria-label="Copiar valor de la raíz">Copiar</button>
+              </p>
+            </div>
+            <div class="display display-fx">
+              <p class="display-etiqueta">f(x) EN LA RAÍZ</p>
+              <p class="display-valor">{{ resultado.valor_f_raiz | fmt(2) }}</p>
+            </div>
+            <div class="display display-iter">
+              <p class="display-etiqueta">ITERACIONES</p>
+              <p class="display-valor">{{ resultado.iteraciones | length }}</p>
+            </div>
+          </div>
+
+          <p class="mensaje-estado">{{ resultado.mensaje }}</p>
+
+          {% if resultado.iteraciones %}
+          <p class="bloque-titulo">LOG · detalle por iteración</p>
+          <div class="tabla-wrap">
+            <table class="iteraciones">
+              <thead>
+                <tr>
+                  <th>i</th>
+                  <th>a</th>
+                  <th>b</th>
+                  <th>xr</th>
+                  <th>f(xr)</th>
+                  <th>error |Δx|</th>
+                </tr>
+              </thead>
+              <tbody id="cuerpo-iteraciones">
+                {% for it in resultado.iteraciones %}
+                <tr {% if loop.last %}class="fila-final"{% elif loop.index0 >= 8 %}class="fila-oculta"{% endif %}>
+                  <td>{{ it.i }}</td>
+                  <td>{{ it.a | fmt(5) }}</td>
+                  <td>{{ it.b | fmt(5) }}</td>
+                  <td>{{ it.xr | fmt(6) }}</td>
+                  <td>{{ it.fxr | fmt(2) }}</td>
+                  <td>{{ it.error | fmt(6) if it.error is not none else "—" }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% if resultado.iteraciones | length > 9 %}
+          <div class="tabla-alterna">
+            <button type="button" class="btn-mostrar-todas" id="btn-mostrar-todas"
+                    data-mas="Mostrar las {{ resultado.iteraciones | length }} iteraciones"
+                    data-menos="Mostrar menos">
+              Mostrar las {{ resultado.iteraciones | length }} iteraciones
+            </button>
+          </div>
+          {% endif %}
+          {% endif %}
+
+          {% if resultado.grafico_funcion %}
+          <div class="scope-convergencia">
+            <p class="bloque-titulo">CANAL 1 · f(x) evaluada en el intervalo</p>
+            <p class="ayuda">La curva real de f(x), la cuerda inicial (a, f(a))–(b, f(b)) en ámbar y la raíz encontrada marcada sobre el eje.</p>
+            {% set gf = resultado.grafico_funcion %}
+            <div class="scope-viewport">
+              <svg viewBox="0 0 {{ gf.ancho }} {{ gf.alto }}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Gráfico de f(x) evaluada en el intervalo">
+                <defs>
+                  <filter id="brillo3" x="-50%" y="-50%" width="200%" height="200%">
+                    <feGaussianBlur stdDeviation="2" result="blur"/>
+                    <feMerge>
+                      <feMergeNode in="blur"/>
+                      <feMergeNode in="SourceGraphic"/>
+                    </feMerge>
+                  </filter>
+                </defs>
+                <line x1="{{ gf.pad }}" y1="{{ gf.y_cero }}" x2="{{ gf.ancho - gf.pad }}" y2="{{ gf.y_cero }}"
+                      stroke="#232c3a" stroke-width="1" stroke-dasharray="3 3"/>
+
+                {% if gf.cuerda %}
+                <line x1="{{ gf.cuerda[0] }}" y1="{{ gf.cuerda[1] }}" x2="{{ gf.cuerda[2] }}" y2="{{ gf.cuerda[3] }}"
+                      stroke="#ffb454" stroke-width="1.4" stroke-dasharray="4 3"/>
+                {% endif %}
+
+                {% for seg in gf.polilineas %}
+                <polyline points="{{ seg }}" fill="none" stroke="#4eeba0" stroke-width="1.8" filter="url(#brillo3)"/>
+                {% endfor %}
+
+                {% if gf.punto_a %}
+                <circle cx="{{ gf.punto_a[0] }}" cy="{{ gf.punto_a[1] }}" r="3.2" fill="#7d8ba0"/>
+                <text x="{{ gf.punto_a[0] - 4 }}" y="{{ gf.punto_a[1] - 9 }}" font-family="IBM Plex Mono, monospace" font-size="11" fill="#7d8ba0">a</text>
+                {% endif %}
+                {% if gf.punto_b %}
+                <circle cx="{{ gf.punto_b[0] }}" cy="{{ gf.punto_b[1] }}" r="3.2" fill="#7d8ba0"/>
+                <text x="{{ gf.punto_b[0] - 4 }}" y="{{ gf.punto_b[1] - 9 }}" font-family="IBM Plex Mono, monospace" font-size="11" fill="#7d8ba0">b</text>
+                {% endif %}
+
+                <line x1="{{ gf.punto_raiz[0] }}" y1="{{ gf.y_cero }}" x2="{{ gf.punto_raiz[0] }}" y2="{{ gf.punto_raiz[1] }}"
+                      stroke="#ffb454" stroke-width="1" opacity="0.5"/>
+                <circle cx="{{ gf.punto_raiz[0] }}" cy="{{ gf.y_cero }}" r="4.5" fill="#ffb454" filter="url(#brillo3)"/>
+                <text x="{{ gf.punto_raiz[0] + 8 }}" y="{{ gf.y_cero - 6 }}" font-family="IBM Plex Mono, monospace" font-size="12" fill="#ffb454">xr</text>
+
+                <text x="{{ gf.pad }}" y="14" font-family="IBM Plex Mono, monospace" font-size="11" fill="#7d8ba0">{{ gf.y_max_label }}</text>
+                <text x="{{ gf.pad }}" y="{{ gf.alto - gf.pad + 16 }}" font-family="IBM Plex Mono, monospace" font-size="11" fill="#7d8ba0">{{ gf.y_min_label }}</text>
+                <text x="{{ gf.pad }}" y="{{ gf.alto - 6 }}" font-family="IBM Plex Mono, monospace" font-size="11" fill="#7d8ba0">x = {{ gf.x_min_label }}</text>
+                <text x="{{ gf.ancho - gf.pad - 60 }}" y="{{ gf.alto - 6 }}" font-family="IBM Plex Mono, monospace" font-size="11" fill="#7d8ba0">x = {{ gf.x_max_label }}</text>
+              </svg>
+            </div>
+          </div>
+          {% endif %}
+
+          {% if resultado.grafico %}
+          <div class="scope-convergencia">
+            <p class="bloque-titulo">CANAL 2 · error vs. iteración (escala log)</p>
+            <p class="ayuda">Cada división hacia abajo es un orden de magnitud menos de error. Pasa el cursor sobre un punto para ver su valor.</p>
+            {% set g = resultado.grafico %}
+            <div class="scope-viewport">
+              <svg viewBox="0 0 {{ g.ancho }} {{ g.alto }}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Gráfico de convergencia del error por iteración">
+                <defs>
+                  <filter id="brillo2" x="-50%" y="-50%" width="200%" height="200%">
+                    <feGaussianBlur stdDeviation="2" result="blur"/>
+                    <feMerge>
+                      <feMergeNode in="blur"/>
+                      <feMergeNode in="SourceGraphic"/>
+                    </feMerge>
+                  </filter>
+                </defs>
+                <line x1="{{ g.pad }}" y1="{{ g.pad }}" x2="{{ g.pad }}" y2="{{ g.alto - g.pad }}" stroke="#232c3a" stroke-width="1"/>
+                <line x1="{{ g.pad }}" y1="{{ g.alto - g.pad }}" x2="{{ g.ancho - g.pad }}" y2="{{ g.alto - g.pad }}" stroke="#232c3a" stroke-width="1"/>
+                <polygon points="{{ g.pad }},{{ g.alto - g.pad }} {{ g.polyline }} {{ g.ancho - g.pad }},{{ g.alto - g.pad }}"
+                         fill="#4eeba0" opacity="0.08"/>
+                <polyline points="{{ g.polyline }}" fill="none" stroke="#4eeba0" stroke-width="1.8"
+                          filter="url(#brillo2)" class="traza-error"/>
+                {% for punto, i, err_pt in g.puntos %}
+                <circle cx="{{ punto[0] }}" cy="{{ punto[1] }}" r="{{ '4.5' if loop.last else '2.6' }}"
+                        fill="{{ '#ffb454' if loop.last else '#4eeba0' }}"
+                        {% if loop.last %}filter="url(#brillo2)"{% endif %}>
+                  <title>Iteración {{ i }} · error ≈ {{ '%.3e' | format(err_pt) }}</title>
+                </circle>
+                {% endfor %}
+                <text x="{{ g.pad }}" y="14" font-family="IBM Plex Mono, monospace" font-size="11" fill="#7d8ba0">{{ g.y_max_label }}</text>
+                <text x="{{ g.pad }}" y="{{ g.alto - g.pad + 16 }}" font-family="IBM Plex Mono, monospace" font-size="11" fill="#7d8ba0">{{ g.y_min_label }}</text>
+                <text x="{{ g.pad }}" y="{{ g.alto - 6 }}" font-family="IBM Plex Mono, monospace" font-size="11" fill="#7d8ba0">iter. {{ g.x_min_label }}</text>
+                <text x="{{ g.ancho - g.pad - 40 }}" y="{{ g.alto - 6 }}" font-family="IBM Plex Mono, monospace" font-size="11" fill="#7d8ba0">iter. {{ g.x_max_label }}</text>
+              </svg>
+            </div>
+          </div>
+          {% endif %}
+        </div>
+      </section>
+    {% endif %}
+
+    <footer class="pie panel">
+      Método de la regla falsa (falsa posición) · Python puro en <code>metodos.py</code> · servido con Flask.
+    </footer>
+
+  </div>
+
+  <script src="{{ url_for('regla_falsa.static', filename='app.js') }}"></script>
+</body>
+</html>

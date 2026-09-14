@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Métodos Numéricos · Menú</title>
+  <link rel="icon" href="data:,">
+  <style>
+    :root {
+      color-scheme: dark;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #0d1117;
+      font-family: 'IBM Plex Sans', system-ui, sans-serif;
+      color: #e6e6e6;
+      padding: 24px;
+    }
+    .contenedor {
+      width: 100%;
+      max-width: 760px;
+    }
+    h1 {
+      font-size: 1.8rem;
+      margin-bottom: 4px;
+      text-align: center;
+    }
+    p.subtitulo {
+      text-align: center;
+      color: #9aa4b2;
+      margin-top: 0;
+      margin-bottom: 36px;
+    }
+    .tarjetas {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 20px;
+    }
+    .tarjeta {
+      display: block;
+      text-decoration: none;
+      color: inherit;
+      background: #161b22;
+      border: 1px solid #232c3a;
+      border-radius: 14px;
+      padding: 28px 24px;
+      transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    .tarjeta:hover, .tarjeta:focus-visible {
+      transform: translateY(-3px);
+      border-color: #4eeba0;
+      box-shadow: 0 8px 24px rgba(78, 235, 160, 0.12);
+    }
+    .tarjeta .icono {
+      font-size: 2rem;
+      margin-bottom: 12px;
+      display: block;
+    }
+    .tarjeta h2 {
+      margin: 0 0 8px 0;
+      font-size: 1.15rem;
+    }
+    .tarjeta p {
+      margin: 0;
+      color: #9aa4b2;
+      font-size: 0.92rem;
+      line-height: 1.4;
+    }
+    .tarjeta .etiqueta {
+      display: inline-block;
+      margin-top: 16px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.78rem;
+      color: #4eeba0;
+    }
+  </style>
+</head>
+<body>
+  <div class="contenedor">
+    <h1>Métodos Numéricos</h1>
+    <p class="subtitulo">Elige la herramienta que quieres usar.</p>
+
+    <div class="tarjetas">
+      <a class="tarjeta" href="{{ url_for('regla_falsa.index') }}">
+        <span class="icono">📈</span>
+        <h2>Regla Falsa</h2>
+        <p>Busca raíces de f(x) por interpolación lineal, con gráfico de convergencia y de la función.</p>
+        <span class="etiqueta">Entrar →</span>
+      </a>
+
+      <a class="tarjeta" href="{{ url_for('gauss_jordan.index') }}">
+        <span class="icono">🧮</span>
+        <h2>Gauss-Jordan</h2>
+        <p>Resuelve sistemas de ecuaciones lineales de n incógnitas viendo cada paso de la eliminación.</p>
+        <span class="etiqueta">Entrar →</span>
+      </a>
+    </div>
+  </div>
+</body>
+</html>
