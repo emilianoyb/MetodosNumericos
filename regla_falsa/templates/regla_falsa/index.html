@@ -31,47 +31,8 @@
     </div>
 
     <header class="encabezado">
-      <h1>Localizador de raíces<br>por interpolación lineal</h1>
-      <p class="subtitulo">
-        Da un intervalo [a, b] donde f cambie de signo. El instrumento traza una
-        cuerda entre (a, f(a)) y (b, f(b)) y usa el punto donde esa cuerda cruza
-        el eje x como la siguiente aproximación a la raíz.
-      </p>
+      <h1>Regla Falsa</h1>
     </header>
-
-    <figure class="panel panel-tornillos scope">
-      <span class="etiqueta-panel">ESQUEMA · CÓMO FUNCIONA</span>
-      <div class="scope-viewport">
-        <svg viewBox="0 0 680 220" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Diagrama del método de la regla falsa">
-          <defs>
-            <filter id="brillo" x="-50%" y="-50%" width="200%" height="200%">
-              <feGaussianBlur stdDeviation="2.2" result="blur"/>
-              <feMerge>
-                <feMergeNode in="blur"/>
-                <feMergeNode in="SourceGraphic"/>
-              </feMerge>
-            </filter>
-          </defs>
-          <line x1="30" y1="150" x2="650" y2="150" stroke="#232c3a" stroke-width="1.5"/>
-          <path d="M 60 60 C 200 30, 320 190, 460 60 S 600 40, 630 55"
-                fill="none" stroke="#4eeba0" stroke-width="1.8" filter="url(#brillo)"/>
-          <circle cx="90" cy="72" r="4" fill="#4eeba0"/>
-          <line x1="90" y1="72" x2="90" y2="150" stroke="#232c3a" stroke-width="1"/>
-          <text x="86" y="168" font-family="IBM Plex Mono, monospace" font-size="13" fill="#7d8ba0">a</text>
-
-          <circle cx="470" cy="63" r="4" fill="#4eeba0"/>
-          <line x1="470" y1="63" x2="470" y2="150" stroke="#232c3a" stroke-width="1"/>
-          <text x="466" y="168" font-family="IBM Plex Mono, monospace" font-size="13" fill="#7d8ba0">b</text>
-
-          <line x1="90" y1="72" x2="470" y2="63" stroke="#ffb454" stroke-width="1.5"/>
-          <line x1="90" y1="72" x2="330" y2="150" stroke="#ffb454" stroke-width="1.5" filter="url(#brillo)"/>
-
-          <circle cx="330" cy="150" r="4.5" fill="#ffb454" filter="url(#brillo)"/>
-          <text x="322" y="172" font-family="IBM Plex Mono, monospace" font-size="13" fill="#ffb454">xr</text>
-        </svg>
-      </div>
-      <figcaption>La cuerda entre a y b marca la nueva aproximación xr sobre el eje x.</figcaption>
-    </figure>
 
     <div class="panel ejemplos" role="group" aria-label="Ejemplos de función para probar rápido">
       <span class="ejemplos-etiqueta">Cargar canal:</span>
