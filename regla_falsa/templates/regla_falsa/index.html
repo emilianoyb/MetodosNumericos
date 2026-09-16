@@ -23,7 +23,7 @@
         {% else %}
           <span class="led led-listo"></span>
         {% endif %}
-        <span class="placa-modelo"><strong>RF&#8209;01</strong> · Regla Falsa</span>
+        <span class="placa-modelo"><strong>RF</strong> · Regla Falsa</span>
       </div>
       <span class="placa-estado">
         {% if error %}FALLA{% elif resultado %}MEDICIÓN COMPLETA{% else %}LISTO{% endif %}
@@ -130,7 +130,7 @@
           <p class="grupo-titulo"><span class="canal">03</span> Criterio de paro</p>
           <div class="campo campo-doble">
             <div>
-              <label for="tolerancia">Tolerancia</label>
+              <label for="tolerancia">Error Esperado</label>
               <input type="text" id="tolerancia" name="tolerancia" value="{{ valores.tolerancia }}" inputmode="decimal" required
                      class="{{ 'campo-invalido' if 'tolerancia' in err else '' }}">
             </div>
@@ -231,7 +231,7 @@
 
           {% if resultado.grafico_funcion %}
           <div class="scope-convergencia">
-            <p class="bloque-titulo">CANAL 1 · f(x) evaluada en el intervalo</p>
+            <p class="bloque-titulo">f(x) evaluada en el intervalo</p>
             <p class="ayuda">La curva real de f(x), la cuerda inicial (a, f(a))–(b, f(b)) en ámbar y la raíz encontrada marcada sobre el eje.</p>
             {% set gf = resultado.grafico_funcion %}
             <div class="scope-viewport">
@@ -282,7 +282,7 @@
 
           {% if resultado.grafico %}
           <div class="scope-convergencia">
-            <p class="bloque-titulo">CANAL 2 · error vs. iteración (escala log)</p>
+            <p class="bloque-titulo">error vs. iteración (escala log)</p>
             <p class="ayuda">Cada división hacia abajo es un orden de magnitud menos de error. Pasa el cursor sobre un punto para ver su valor.</p>
             {% set g = resultado.grafico %}
             <div class="scope-viewport">
