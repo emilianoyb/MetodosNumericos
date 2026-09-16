@@ -1,12 +1,6 @@
 """
 Método de la Regla Falsa (Falsa Posición) para encontrar raíces de f(x) = 0.
 
-Este módulo es Python puro: no depende de Flask. Se encarga de:
-  1) convertir el texto que escribe el usuario (ej. "x**3 - x - 2") en una
-     función evaluable, usando sympy para el parseo (evita usar eval crudo
-     sobre lo que escribe el usuario), y
-  2) ejecutar el algoritmo de la regla falsa devolviendo la raíz y el
-     detalle de cada iteración.
 """
 import math
 
